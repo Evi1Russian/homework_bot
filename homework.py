@@ -39,7 +39,7 @@ logging.basicConfig(
 
 
 def send_message(bot, message):
-    """Отправляет сообщение в Telegram чат"""
+    """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
     except Exception as error:
@@ -50,7 +50,6 @@ def send_message(bot, message):
 
 def get_api_answer(current_timestamp):
     """Делает запрос к API биржы и возвращает ответ."""
-
     try:
 
         timestamp = current_timestamp or int(time.time())
