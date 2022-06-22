@@ -59,7 +59,7 @@ def get_api_answer(current_timestamp):
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
     if response.status_code != HTTPStatus.OK:
-        raise APIStatusCodeError('Сервис недоступен')    
+        raise APIStatusCodeError('Сервис недоступен')
 
     response = response.json()
     return response
