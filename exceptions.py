@@ -4,3 +4,7 @@ class APIStatusCodeError(Exception):
 
 class StatusError(Exception):
     pass
+
+
+class SendMessageError(Exception):
+    pass

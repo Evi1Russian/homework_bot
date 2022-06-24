@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 import requests
 
-from exceptions import StatusError, APIStatusCodeError
+from exceptions import StatusError, APIStatusCodeError, SendMessageError
 
 from telegram import Bot
 
@@ -25,7 +25,7 @@ ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
-HOMEWORK_STATUSES = {
+HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -43,22 +43,21 @@ def send_message(bot, message):
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
     except Exception as error:
-        logging.error(f'Ошибка отправки сообщения в телеграм: {error}')
+        raise SendMessageError(
+            f'Ошибка отправки сообщения в телеграм: {error}')
     else:
         logging.info('Сообщение в телеграм успешно отправлено')
 
 
 def get_api_answer(current_timestamp):
-    """Делает запрос к API биржы и возвращает ответ."""
-    try:
+    """Делает запрос к API и возвращает ответ."""
 
-        timestamp = current_timestamp or int(time.time())
-        params = {'from_date': timestamp}
-        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-    except Exception as error:
-        logging.error(f'Ошибка при запросе к основному API: {error}')
+    timestamp = current_timestamp or int(time.time())
+    params = {'from_date': timestamp}
+    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+
     if response.status_code != HTTPStatus.OK:
-        raise APIStatusCodeError('Сервис недоступен')
+        raise APIStatusCodeError(f'Сервис недоступен. response = {response}')
 
     response = response.json()
     return response
@@ -99,14 +98,12 @@ def parse_status(homework):
     homework_name = homework['homework_name']
     homework_status = homework['status']
 
-    if homework_status in HOMEWORK_STATUSES:
-        verdict = HOMEWORK_STATUSES[homework_status]
-    else:
-        message = 'Статус ответа не известен'
+    if homework_status not in HOMEWORK_VERDICTS:
+        message = f'Статус {homework_status} неизвестен'
         raise StatusError(message)
 
     homework_name = homework['homework_name']
-    verdict = HOMEWORK_STATUSES.get(homework_status)
+    verdict = HOMEWORK_VERDICTS.get(homework_status)
 
     message = f'Изменился статус проверки работы "{homework_name}". {verdict}'
     logging.debug(message)
@@ -138,7 +135,7 @@ def main():
     while True:
         try:
             response = get_api_answer(current_timestamp)
-
+            current_timestamp = response['current_date']
             homeworks = check_response(response)
             homework = homeworks[0]
             current_report = send_message(bot, parse_status(homework))
@@ -148,14 +145,15 @@ def main():
                 logging.debug(
                     'Нет обновлений статуса домашней работы'
                 )
-            time.sleep(RETRY_TIME)
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
+            send_message(bot, message)
             logging.exception(message)
-            time.sleep(RETRY_TIME)
         else:
             logging.info('функция main полностью сработала')
+        finally:
+            time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
