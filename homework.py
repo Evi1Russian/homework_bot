@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 import requests
 
-from exceptions import StatusError, APIStatusCodeError, SendMessageError
+from exceptions import StatusError, APIStatusCodeError
 
 from telegram import Bot
 
@@ -40,13 +40,7 @@ logging.basicConfig(
 
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
-    try:
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-    except Exception as error:
-        raise SendMessageError(
-            f'Ошибка отправки сообщения в телеграм: {error}')
-    else:
-        logging.info('Сообщение в телеграм успешно отправлено')
+    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
 
 
 def get_api_answer(current_timestamp):
@@ -56,7 +50,8 @@ def get_api_answer(current_timestamp):
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
 
     if response.status_code != HTTPStatus.OK:
-        raise APIStatusCodeError(f'Сервис недоступен. response = {response}')
+        raise APIStatusCodeError(
+            f'Сервис недоступен. headers = {HEADERS}, params={params}')
 
     response = response.json()
     return response
